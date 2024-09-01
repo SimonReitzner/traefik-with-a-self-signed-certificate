@@ -1,0 +1,6 @@
+.vagrant
+roles
+*.key
+*.csr
+*.env
+*.crt

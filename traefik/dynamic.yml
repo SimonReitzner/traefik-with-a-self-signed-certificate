@@ -1,0 +1,13 @@
+# /etc/traefik/dynamic/dynamic.yml
+
+tls:
+  certificates:
+    - certFile: "/etc/traefik/certs/server.crt"
+      keyFile: "/etc/traefik/certs/server.key"
+      stores:
+        - default
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/etc/traefik/certs/server.crt"
+        keyFile: "/etc/traefik/certs/server.key"

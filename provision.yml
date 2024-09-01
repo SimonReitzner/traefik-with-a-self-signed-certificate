@@ -1,0 +1,96 @@
+---
+- hosts: all
+  become: yes
+
+  vars:
+    docker_installation_method: apt
+    docker_service_state: started
+    docker_users:
+      - vagrant
+    pip_install_packages:
+      - name: docker
+        version: "6.1.3"
+      - name: docker-compose
+        version: "1.29.2"
+      - name: requests
+        version: "2.31.0"
+
+  roles:
+    - geerlingguy.pip
+    - geerlingguy.docker
+
+  tasks:
+
+    # Ensures the Docker service is started and enabled to start on boot.
+    - name: Ensure docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    # Adds the vagrant user to the docker group to grant Docker permissions.
+    - name: Ensure user has rights to docker
+      user:
+        name: vagrant
+        groups: docker
+        append: yes
+
+    # Creates the necessary directory structure for Traefik configuration.
+    - name: Create Traefik directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /home/vagrant/setup
+        - /home/vagrant/setup/certs
+        - /home/vagrant/setup/traefik
+
+    # Copies the Docker Compose configuration file to the Traefik directory.
+    - name: Copy docker-compose.yml
+      copy:
+        src: docker-compose.yml
+        dest: /home/vagrant/setup/docker-compose.yml
+        mode: "0644"
+
+    # Copies the Traefik dynamic configuration file to the appropriate directory.
+    - name: Copy dynamic.yml
+      copy:
+        src: traefik/dynamic.yml
+        dest: /home/vagrant/setup/traefik/dynamic.yml
+        mode: "0644"
+
+    # Copies the Traefik static configuration file to the appropriate directory.
+    - name: Copy traefik.yml
+      copy:
+        src: traefik/traefik.yml
+        dest: /home/vagrant/setup/traefik/traefik.yml
+        mode: "0644"
+
+    # Copies the .env file.
+    - name: Copy .env
+      copy:
+        src: .env
+        dest: /home/vagrant/setup/.env
+        mode: "0644"
+
+    # Copies the SSL certificate to the Traefik certs directory.
+    - name: Copy SSL certificate
+      copy:
+        src: certs/server.crt
+        dest: /home/vagrant/setup/certs/server.crt
+        mode: "0644"
+
+    # Copies the SSL key to the Traefik certs directory with restricted permissions.
+    - name: Copy SSL key
+      copy:
+        src: certs/server.key
+        dest: /home/vagrant/setup/certs/server.key
+        mode: "0600"
+
+    # Deploys and starts the Traefik and associated services defined in docker-compose.yml.
+    - name: Start Traefik
+      docker_compose:
+        project_src: /home/vagrant/setup
+        state: present
+      become_user: vagrant
